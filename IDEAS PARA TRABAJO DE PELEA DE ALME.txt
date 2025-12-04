@@ -112,3 +112,29 @@ la-ostra-dura/
 ├── tailwind.config.js
 ├── postcss.config.js
 └── README.md
+
+# 1. Crear proyecto con Vite + React + TypeScript
+npm create vite@latest la-ostra-dura -- --template react-ts
+
+# 2. Entrar a la carpeta
+cd la-ostra-dura
+
+# 3. Instalar dependencias básicas
+npm install
+
+# 4. Instalar Tailwind CSS y utilidades
+npm install -D tailwindcss postcss autoprefixer
+
+# 5. Instalar Zustand para manejo de estado
+npm install zustand
+
+# 6. Inicializar Tailwind
+npx tailwindcss init -p
+Nota: Si ves algún error, prueba con:
+
+bash
+# Si usas Windows y hay problemas:
+npm create vite@latest la-ostra-dura --template react-ts
+
+# O si prefieres sin TypeScript (más simple):
+npm create vite@latest la-ostra-dura --template react
