@@ -1,0 +1,29 @@
+IDEAS PARA TRABAJO DE PELEA DE ALMEJAS:
+
+Nombres:
+-La Ostra Dura
+Eslogan:
+-Apuesta y Reza (que gane tu almeja)
+
+esquema de colores:
+
+#E4C525 - dorado
+#C70735 - rojo
+#1545FD - azul marino
+#B6FFFF - azul turquesa
+#282828 - negro
+#0B0F19 - fondo de la página
+
+Scripts:
+
+-Animación del principio al entrar
+-logo de almeja estilo tubo de neon
+-Carrusel que se deslizan solas con los distintos tipos de juegos que hay
+-animaciones en bucle de imágenes y pestaña emergente con mensajes de confirmación
+-
+
+Cosas chulas:
+
+-aviso legal de mayoría de edad para jugar con frase divertida
+-nombres y palabras que referencien a almejas y cosas del mar
+-
