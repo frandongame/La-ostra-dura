@@ -114,7 +114,7 @@ $img_poker = $img_ganador; // fallback: imagen existente
                 <!-- LUCHADOR 1 -->
                 <div class="fighter" id="fighter-card-1">
                     <div class="fighter-card">
-                        <img src="../assets/images/pezMamador.jpg" alt="Criatura 1" class="fighter-avatar" id="fighter-img-1">
+                        <img src="" alt="Criatura 1" class="fighter-avatar" id="fighter-img-1">
                         <div class="fighter-info">
                             <div class="fighter-name" id="name1"></div>
                             <div class="fighter-title">"El Conquistador del Fondo"</div>
