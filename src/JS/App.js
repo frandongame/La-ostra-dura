@@ -1,842 +1,970 @@
-// ============================================
-// ESTADO DEL JUEGO (Simulando Zustand/Stores)
-// ============================================
-let gameState = {
-    balance: Number(localStorage.getItem('balance')) || 5000, 
-    selectedFighter: null,
-    betAmount: 500,
-    fightInProgress: false,
-    hp1: 100,
-    hp2: 100,
-    round: 1,
-    fighter1Name: '',
-    fighter2Name: '',
-    fighter1Stats: {},
-    fighter2Stats: {}
+/**
+ * ============================================================================
+ * PROYECTO: LA OSTRA DURA - MOTOR DE JUEGO (v3.1.0 - FIXED)
+ * ============================================================================
+ * Correcciones aplicadas:
+ * - Fix animaciones de combate (hit/attacking se remueven correctamente)
+ * - Fix localStorage sincronización
+ * - Fix modal responsive
+ * - Fix sistema de comentarios (typing mejorado)
+ * - Fix selección de imágenes únicas
+ * - Fix re-habilitación de controles en errores
+ * ============================================================================
+ */
+
+// ============================================================================
+// 1. CONFIGURACIÓN Y CONSTANTES GLOBALES
+// ============================================================================
+
+const CONFIG = {
+    initialBalance: 5000,
+    minBet: 50,
+    maxBet: 10000,
+    volume: 0.5,
+    paths: {
+        images: '../assets/images/',
+        sounds: '../assets/sounds/'
+    },
+    delays: {
+        typingSpeed: 30,
+        roundDelay: 2000,
+        turnDelay: 1200,
+        introDelay: 4000
+    }
 };
 
-// ============================================
-// DATOS DE COMBATE (Nombres y Stats)
-// ============================================
-const clamNames = [
-    'ALMEJANDRO MAGNO', 'PEARL HARBOR', 'ALMEJA NITRO', 'CONCHA TU MADRE',
-    'NAPOLEÓN BONALMEJA', 'BRUCE LEE-MEJA', 'MOHAMMED ALMEJÍ', 'ROCKY BALMEJA',
-    'MIKE TISON-CHA', 'FLOYD MAYALMEJA', 'CONOR MCCONCHA', 'ANDERSON SALMEJA',
-    'JON CONCHONES', 'KHABIB NURMAGOALMEJA', 'GEORGE ST-ALMEJA', 'DEMETRIOUS CONCHASON',
-    'ALMEJA VELÁSQUEZ', 'FRANCIS NGANNALMEJA', 'ISRAEL ALMEJESANYA', 'KAMARU USCHAMEJA',
-    'TONY FERGUSALAMEJA', 'CHARLES CONCHAVEIRA', 'DUSTIN POIRIER-LA', 'JUSTIN GAETHJEJA',
-    'ALJAMAIN CONCHALING', 'SEAN OSALMEJA', 'MERAB DVALISHVALMEJA', 'ILIA TOPURIEJA'
+// ============================================================================
+// 2. BASE DE DATOS LOCAL (MOCK DATA)
+// ============================================================================
+
+const DB_FIGHTER_NAMES = [
+    'ALMEJANDRO MAGNO', 'EL MAKO', 'ALMEJA NITRO', 'CONCHA TU MADRE',
+    'NAPOLEÓN BONALMEJA', 'BRUCE LEE-MEJA', 'MOHAMMED ALMEJÁ', 'ROCKY BALMEJA',
+    'MIKE CONCHAISON', 'PEQUEÑO BASTARDO', 'CONOR MCCONCHA', 'ANDERSON SALMEJA',
+    'JON CONCHONES', 'KHABIB NURMAGOALMEJA', 'EL SCAPERLAS', 'DEMETRIOUS CONCHASON',
+    'ALMEJA VELÁSQUEZ', 'FRANCIS NGANNALMEJA', 'MR.CONCHUDO', 'KAMARU USCHAMEJA',
+    'PROFETA DEL SUSHI', 'GUARDIÁN DE LA PAELLA', 'AHOGADOR DE PECES', 'JUSTIN GAETHJEJA',
+    'ALJAMAIN CONCHALING', 'ESPANTA CEBOS', 'MERAB DVALISHVALMEJA', 'ILIA TOPURIEJA',
+    'LA PERLA NEGRA', 'CAPITÁN CORAL', 'TIBURÓN DE TIERRA', 'EL CRUSTÁCEO CASCARRABIAS',
+    'BOB ESPONJA DOPEADO', 'PATRICIO ESTRELLA DE LA MUERTE', 'CALAMARDO GUAPO', 'PLANKTON ROID',
+    'DON CANGREJO CAPITALISTA', 'ARENITA MEJILLAS DE ACERO', 'LA OSTRA ASESINA', 'EL MOLUSCO MALDITO'
 ];
 
-const funnyStats = [
-    { power: 85, defense: 78, speed: 92 },
-    { power: 92, defense: 71, speed: 88 },
-    { power: 88, defense: 95, speed: 75 },
-    { power: 90, defense: 85, speed: 83 },
-    { power: 78, defense: 88, speed: 95 },
-    { power: 94, defense: 76, speed: 89 },
-    { power: 82, defense: 91, speed: 86 }
+const DB_FIGHTER_STATS = [
+    { type: 'Tank', power: 75, defense: 90, speed: 60, hp: 120 },
+    { type: 'Glass Cannon', power: 98, defense: 50, speed: 95, hp: 80 },
+    { type: 'Balanced', power: 85, defense: 80, speed: 80, hp: 100 },
+    { type: 'Dodger', power: 70, defense: 60, speed: 100, hp: 90 },
+    { type: 'Bruiser', power: 90, defense: 85, speed: 70, hp: 110 },
+    { type: 'Speedster', power: 80, defense: 70, speed: 98, hp: 95 },
+    { type: 'Juggernaut', power: 95, defense: 95, speed: 50, hp: 130 }
 ];
 
-// ============================================
-// COMENTARIOS EXPANDIDOS DEL PULPO LOCUTOR
-// ============================================
-const comments = {
-    start: [
-        '🎙️ ¡Buenas noches! Soy el Pulpo Locutor y esto es LA OSTRA DURA - Apuesta y Reza',
-        '🎙️ ¡Preparen sus billeteras porque hoy alguien se va a la paella! El chef ya está afilando los cuchillos.',
-        '🎙️ ¡Bienvenidos al show más salado del océano! Que gane la almeja más cabreada.',
-        '🎙️ Recuerden: esto es más real que las promesas de tu ex. ¡Las apuestas están abiertas!',
-        '🎙️ La tensión se corta con un cuchillo... que después usaremos para cortar el limón. ¡Apostar, apostar!',
-        '🎙️ El ambiente es espeso. ¡La adrenalina está por las conchas!'
+const DB_COMMENTS = {
+    intro: [
+        '🎙️ ¡Buenas noches, degenerados! Soy el Pulpo Locutor desde el fondo del abismo.',
+        '🎙️ ¡Preparen sus billeteras! El chef ya está afilando los cuchillos.',
+        '🎙️ ¡Bienvenidos a LA OSTRA DURA! Donde la dignidad se pierde más rápido que el dinero.',
+        '🎙️ El olor a miedo y a mantequilla de ajo inunda la arena...',
+        '🎙️ Hoy tenemos un menú especial: ¡Dolor y Mariscos!',
+        '🎙️ Recuerden: La casa siempre gana, pero soñar es gratis (por ahora).'
     ],
-    beforeFight: [
-        '🥊 Las luchadoras están en posición... ¡Esto va a doler! El árbitro es un caracol, no esperen rapidez.',
-        '🥊 Ambas se miran fijamente. El odio es palpable. ¡Ojalá la mía gane!',
-        '🥊 El público huele a salitre y a deudas. ¡Todo en orden para empezar!',
-        '🥊 Últimas apuestas antes de que suene la campana. No miren a sus cuentas, miren a la almeja.'
+    roundStart: [
+        '🔔 ¡ROUND {round}! ¿Quién terminará en el plato?',
+        '🔔 ¡Suena la campana! ¡Protéjanse las conchas!',
+        '🔔 Round {round}: La tensión se corta con un cuchillo de cocina.',
+        '🔔 ¡A pelear! El perdedor paga la cena (literalmente es la cena).',
+        '🔔 ¡Round {round}! ¡Muestren de qué están hechos (carbonato de calcio)!',
+        '🔔 ¡Comienza la ronda {round}! ¡Hagan sus últimas oraciones a Poseidón!'
     ],
-    hit: [
-        '💥 ¡AUCH! Eso dolió hasta en mi cuenta bancaria',
-        '💥 ¡BRUTAL! Mi abuela pega más fuerte pero bueno, es una almeja...',
-        '💥 ¡ZAS! Creo que le salió una perla del golpe',
-        '💥 ¡PUM! Eso se sintió hasta en Bikini Bottom',
-        '💥 ¡WHAM! Le sacó el agua salada del cuerpo',
-        '💥 ¡BAM! Esa almeja vio estrellitas de mar',
-        '💥 ¡CLASH! El público está de pie gritando (o eso creo).'
+    lightHit: [
+        '💥 Un golpe suave, apenas le quitó el alga.',
+        '💥 ¡Plaf! Sonó como una chancla mojada.',
+        '💥 Le acarició la cara. ¿Eso fue un ataque o un coqueteo?',
+        '💥 Golpe de advertencia. "¡No me toques la perla!"',
+        '💥 ¡Boing! Rebotó en su caparazón.',
+        '💥 Un ataque tímido. Le falta odio a ese golpe.'
+    ],
+    heavyHit: [
+        '💥 ¡BAM! ¡Le movió hasta los ancestros!',
+        '💥 ¡CRACK! Creo que escuché una grieta...',
+        '💥 ¡QUÉ GOLPAZO! Le sacó el agua salada por las orejas (si tuviera).',
+        '💥 ¡PUM! Directo a la valva. Eso va a doler mañana.',
+        '💥 ¡ZASCA! Le reinició el Windows submarino.',
+        '💥 ¡BRUTAL! Ese golpe se sintió en la Atlántida.'
     ],
     critical: [
-        '🔥🔥🔥 ¡¡GOLPE CRÍTICO!! ¡ESO FUE ILEGAL EN TODOS LOS OCÉANOS!',
-        '🔥🔥🔥 ¡¡DEVASTADOR!! ¡ALGUIEN LLAME A LA ONU!',
-        '🔥🔥🔥 ¡¡FATALITY!! ¡MORTAL KOMBAT SE QUEDA CORTO!',
-        '🔥🔥🔥 ¡¡DESTRUCCIÓN TOTAL!! ¡BOB ESPONJA, APAGA LA TELE!'
-    ],
-    lowHP: [
-        '😰 Esto se está poniendo feo... como mi historial de apuestas',
-        '😰 Una está secretando líquido marino... eso es sangre, ¿verdad?',
-        '😰 ¡Esto es más tenso que mi situación financiera!',
-        '😰 El chef ya está poniendo aceite en la sartén. ¡Huele delicioso!',
-        '😰 Mis nervios están más fritos que la perdedora va a estar. ¡No te rindas!',
-    ],
-    round: [
-        '🔔 ¡Suena la campana! Round {round} comienza AHORA. ¡El árbitro está en shock!',
-        '🔔 Round {round} - ¿Quién sobrevivirá? ¡Apuesten sus riñones! El público está enardecido.',
-        '🔔 ¡Round {round}! Entramos en la recta final. El olor a derrota es intenso...',
+        '🔥🔥🔥 ¡¡CRÍTICO!! ¡LE ARRANCÓ MEDIA CONCHA!',
+        '🔥🔥🔥 ¡¡DEVASTADOR!! ¡ALGUIEN LLAME A LA AMBULANCIA MARINA!',
+        '🔥🔥🔥 ¡¡FATALITY!! ¡ESO FUE ILEGAL EN 7 OCÉANOS!',
+        '🔥🔥🔥 ¡¡GOLPE MAESTRO!! ¡Le ha dado en su punto débil!',
+        '🔥🔥🔥 ¡¡INSANE!! ¡El público enloquece con esa violencia!',
+        '🔥🔥🔥 ¡¡DESTRUCCIÓN!! ¡Lo ha dejado viendo estrellas de mar!'
     ],
     dodge: [
-        '👀 ¡Increíble esquive! Tiene reflejos de gato marino. ¡Por poco!',
-        '👀 ¡Se agachó justo a tiempo! El instinto de supervivencia es real.',
-        '👀 ¡QUÉ AGILIDAD! Yo ni puedo bajar por las escaleras sin tropezar. ¡Movimiento Matrix!',
+        '💀 ¡Matrix! Esquivó ese golpe como si debiera dinero.',
+        '💀 ¡Falló! Se movió más rápido que un pez vela con cafeína.',
+        '💀 ¡Aire! Solo golpeó el agua. Qué vergüenza.',
+        '💀 ¡Increíble agilidad para algo sin piernas!',
+        '💀 ¡Uy! Por un pelo de gamba no le da.',
+        '💀 ¡Reflejos de ninja! Esa almeja entrena crossfit.'
+    ],
+    lowHp: [
+        '😰 ¡Se tambalea! Huele a sopa de mariscos...',
+        '😰 ¡Está a un golpe de ser paella!',
+        '😰 ¡Resiste! ¡No vayas hacia la luz (del barco pesquero)!',
+        '😰 ¡Está sangrando... o es salsa de tomate? No, es sangre.',
+        '😰 ¡El chef está precalentando la sartén! ¡Corre!',
+        '😰 ¡Peligro crítico! ¡Su vida pende de un hilo de pescar!'
     ],
     win: [
-        '🏆 ¡Y TENEMOS GANADORA! La otra ya está siendo marinada... ¡Felicidades, Cliente!',
-        '🏆 ¡VICTORIA ÉPICA! El chef está llorando de alegría. ¡Qué gran paella saldrá de ahí!',
-        '🏆 ¡FINAL! La perdedora será servida con limón y perejil. Alguien avise a su familia...',
-        '🏆 ¡K.O.! La ganadora vive para apostar (perder) otro día. ¡El público enloquece!',
+        '🏆 ¡TENEMOS GANADOR! La cena está servida.',
+        '🏆 ¡VICTORIA! El mar tiene un nuevo rey (o reina).',
+        '🏆 ¡SE ACABÓ! Recojan los pedazos del perdedor.',
+        '🏆 ¡K.O.! Una victoria limpia... bueno, llena de arena y sangre.',
+        '🏆 ¡INCREÍBLE! Nadie daba un duro por él, ¡pero ganó!',
+        '🏆 ¡CAMPEÓN! Ahora a cobrar (o a pagar).'
     ],
-    chef: [
-        '👨‍🍳 El chef comenta: "Ya tengo la receta lista... le pondré una pizca de alevosía."',
-        '👨‍🍳 El chef afila los cuchillos con una sonrisa macabra. ¡Qué perturbador!',
-        '👨‍🍳 Chef: "Con un toque de limón quedará perfecta. ¡Cuidado con el espectáculo!"'
-    ],
-    audience: [
-        '👥 ¡El público está enloquecido! Están lanzando perlas al ring. ¡Son de verdad!',
-        '👥 ¡La multitud corea el nombre de su favorita! ¡Yuju!',
-        '👥 ¡Alguien desmayó en las gradas! Demasiada emoción... o demasiado alcohol.',
-        '👥 ¡El público exige MÁS VIOLENCIA! ¡Vándalos!',
+    lose: [
+        '🔪 El perdedor está siendo marinado en este momento.',
+        '🔪 ¡Derrota humillante! Al menos sabrá bien con limón.',
+        '🔪 Se acabó para él. Descanse en (pez) paz.',
+        '🔪 ¡Adiós! Fue un buen luchador, será un mejor plato.',
+        '🔪 La derrota amarga... casi tanto como la bilis de pez.',
+        '🔪 Ha caído. El ciclo de la vida (y la cocina) continúa.'
     ]
 };
 
-// ============================================
-// UTILS
-// ============================================
+// ============================================================================
+// 3. CLASE AUDIOMANAGER (MOTOR DE SONIDO ROBUSTO)
+// ============================================================================
 
-/** Añade un comentario al feed con efecto de máquina de escribir (useTypingEffect.ts). */
-function addCommentTyping(text, speed, shout = false, className = '') {
-    const commentaryBox = document.getElementById('commentary');
-    const newCommentDiv = document.createElement('div');
-    newCommentDiv.className = `comment ${shout ? 'shout' : ''} ${className}`;
-    newCommentDiv.innerHTML = `<span class="comment-time">${new Date().toLocaleTimeString('es-ES', { hour12: false })}</span> <span class="comment-text" id="typing-${Date.now()}"></span>`;
-    
-    commentaryBox.prepend(newCommentDiv); 
-    commentaryBox.scrollTop = 0; 
-    
-    const typingSpan = document.getElementById(newCommentDiv.querySelector('.comment-text').id);
-    let i = 0;
-    
-    function type() {
-        if (i < text.length) {
-            typingSpan.textContent += text.charAt(i);
-            i++;
-            setTimeout(type, speed);
-        } else {
-            typingSpan.removeAttribute('id'); 
-        }
+class AudioManager {
+    constructor() {
+        this.sounds = {};
+        this.bgmMenu = null; // Música del menú (soundtrack.mp3)
+        this.bgmFight = null; // Música de pelea (pelea-fondo.mp3)
+        this.currentBGM = null; // BGM actual sonando
+        this.isMuted = false;
+        this.masterVolume = 0.4;
+        this.initialized = false;
+        this.isFighting = false; // Estado de pelea
+        
+        this.library = {
+            bgmMenu: 'soundtrack.mp3',
+            bgmFight: 'pelea-fondo.mp3',
+            hit_light: 'puñetazos.mp3',
+            hit_heavy: 'puñetazoFuerte.mp3',
+            crit: 'puñetazoFuerte.mp3',
+            dodge: 'esquivar.mp3',
+            cash: 'dineros.mp3',
+            win: 'victoria.mp3',
+            lose: 'derrota.mp3',
+            bell: 'campana.mp3',
+            click: 'dineros.mp3'
+        };
     }
-    type();
-}
 
-/** Añade un comentario instantáneo al feed */
-function addComment(text, shout = false, className = '') {
-    const commentaryBox = document.getElementById('commentary');
-    const newCommentDiv = document.createElement('div');
-    newCommentDiv.className = `comment ${shout ? 'shout' : ''} ${className}`;
-    newCommentDiv.innerHTML = `<span class="comment-time">${new Date().toLocaleTimeString('es-ES', { hour12: false })}</span> <span class="comment-text">${text}</span>`;
-    commentaryBox.prepend(newCommentDiv);
-    commentaryBox.scrollTop = 0; 
-}
+    init() {
+        if (this.initialized) return;
 
-// ============================================
-// INICIALIZACIÓN
-// ============================================
-document.addEventListener('DOMContentLoaded', () => {
-    createBubbles(); 
-    updateBalance();
+        console.log("🔊 AudioManager: Inicializando sistema de sonido...");
+        
+        // Cargar ambas pistas de música
+        this.bgmMenu = new Audio(CONFIG.paths.sounds + this.library.bgmMenu);
+        this.bgmMenu.loop = true;
+        this.bgmMenu.volume = this.masterVolume * 0.8;
 
-    // Cargar las imágenes de las criaturas desde el atributo data-criaturas (llenado por PHP)
-    try {
-        const imgDataEl = document.getElementById('img-data-container');
-        if (imgDataEl && imgDataEl.dataset && imgDataEl.dataset.criaturas) {
-            const names = JSON.parse(imgDataEl.dataset.criaturas || '[]');
-            if (names && names.length) {
-                // Prefijar la ruta relativa correcta desde `src/web/` hacia `src/assets/images/`
-                fighterImages = names.map(n => '../assets/images/' + n);
+        this.bgmFight = new Audio(CONFIG.paths.sounds + this.library.bgmFight);
+        this.bgmFight.loop = true;
+        this.bgmFight.volume = this.masterVolume * 0.9; // Un poco más alta para la pelea
+
+        // Precargar efectos
+        for (const [key, filename] of Object.entries(this.library)) {
+            if (key !== 'bgmMenu' && key !== 'bgmFight') {
+                const audio = new Audio(CONFIG.paths.sounds + filename);
+                audio.preload = 'auto';
+                this.sounds[key] = audio;
             }
         }
-    } catch (e) {
-        console.warn('No se pudo cargar lista de imágenes locales, se usarán placeholders.', e);
+
+        // Iniciar con música del menú
+        this.playMenuMusic();
+        this.initialized = true;
     }
 
-    randomizeFighters();
-    document.getElementById('commentary').innerHTML = '';
+    playMenuMusic() {
+        if (this.isMuted) return;
+        
+        console.log("🎵 [MENU] Cambiando a soundtrack.mp3...");
+        
+        // DETENER completamente la música de pelea
+        if (this.bgmFight) {
+            this.bgmFight.pause();
+            this.bgmFight.currentTime = 0;
+            console.log("⏹️ pelea-fondo.mp3 detenido");
+        }
 
-    if (localStorage.getItem('balance')) {
-        addCommentTyping('🎙️ ¡El Pulpo Locutor te extrañó! Bienvenido de vuelta, adicto. 😈', 80);
-    } else {
-        addCommentTyping('🎙️ ¡Bienvenido, novato! Lee el aviso de edad, ¡es importante para tu salud mental! 😈', 80);
+        // REPRODUCIR música del menú
+        if (this.bgmMenu) {
+            this.bgmMenu.currentTime = 0;
+            this.bgmMenu.volume = this.masterVolume * 0.8;
+            
+            const playPromise = this.bgmMenu.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log("✅ [MENU] soundtrack.mp3 sonando");
+                    this.currentBGM = this.bgmMenu;
+                    this.isFighting = false;
+                }).catch(error => {
+                    console.error("❌ [MENU] Error reproduciendo soundtrack:", error);
+                });
+            }
+        }
     }
+
+    playFightMusic() {
+        if (this.isMuted) return;
+        
+        console.log("🎵 [PELEA] Cambiando a pelea-fondo.mp3...");
+        
+        // DETENER completamente la música del menú
+        if (this.bgmMenu) {
+            this.bgmMenu.pause();
+            this.bgmMenu.currentTime = 0;
+            console.log("⏹️ soundtrack.mp3 detenido");
+        }
+
+        // REPRODUCIR música de pelea
+        if (this.bgmFight) {
+            this.bgmFight.currentTime = 0;
+            this.bgmFight.volume = this.masterVolume * 0.9;
+            
+            const playPromise = this.bgmFight.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    console.log("✅ [PELEA] pelea-fondo.mp3 sonando");
+                    this.currentBGM = this.bgmFight;
+                    this.isFighting = true;
+                }).catch(error => {
+                    console.error("❌ [PELEA] Error reproduciendo pelea-fondo:", error);
+                });
+            }
+        }
+    }
+
+    // Efecto de fade in
+    fadeIn(audio) {
+        if (!audio) return;
+        
+        audio.volume = 0;
+        const targetVolume = this.masterVolume * (audio === this.bgmFight ? 0.9 : 0.8);
+        
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                let currentVol = 0;
+                const fadeInterval = setInterval(() => {
+                    if (currentVol < targetVolume) {
+                        currentVol += 0.05;
+                        audio.volume = Math.min(currentVol, targetVolume);
+                    } else {
+                        audio.volume = targetVolume;
+                        clearInterval(fadeInterval);
+                    }
+                }, 50);
+            }).catch(error => {
+                console.warn("🔊 Autoplay bloqueado. Esperando interacción UI.");
+            });
+        }
+    }
+
+    // Efecto de fade out
+    fadeOut(audio, callback) {
+        if (!audio || audio.paused) {
+            if (callback) callback();
+            return;
+        }
+        
+        const fadeInterval = setInterval(() => {
+            if (audio.volume > 0.05) {
+                audio.volume = Math.max(audio.volume - 0.05, 0);
+            } else {
+                audio.volume = 0;
+                clearInterval(fadeInterval);
+                if (callback) callback();
+            }
+        }, 50);
+    }
+
+    stopAllMusic() {
+        if (this.bgmMenu) {
+            this.bgmMenu.pause();
+            this.bgmMenu.currentTime = 0;
+        }
+        if (this.bgmFight) {
+            this.bgmFight.pause();
+            this.bgmFight.currentTime = 0;
+        }
+    }
+
+    play(key) {
+        if (this.isMuted || !this.sounds[key]) return;
+
+        try {
+            const soundClone = this.sounds[key].cloneNode();
+            soundClone.volume = this.masterVolume;
+            
+            const playPromise = soundClone.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.warn(`🔊 Error reproduciendo ${key}:`, error);
+                });
+            }
+        } catch (e) {
+            console.error(`🔊 Error crítico en audio ${key}:`, e);
+        }
+    }
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        if (this.isMuted) {
+            this.stopAllMusic();
+        } else {
+            // Restaurar la música según el estado
+            if (this.isFighting) {
+                this.playFightMusic();
+            } else {
+                this.playMenuMusic();
+            }
+        }
+        console.log(`🔊 Audio Muted: ${this.isMuted}`);
+        return this.isMuted;
+    }
+}
+
+const audioManager = new AudioManager();
+
+// ============================================================================
+// 4. CLASE GAMEENGINE (LÓGICA DEL JUEGO)
+// ============================================================================
+
+class GameEngine {
+    constructor() {
+        this.balance = Number(localStorage.getItem('balance')) || CONFIG.initialBalance;
+        this.betAmount = CONFIG.minBet;
+        this.selectedFighter = null;
+        this.isFighting = false;
+        
+        this.fighters = {
+            1: { name: '', stats: {}, hp: 100, maxHp: 100, image: '' },
+            2: { name: '', stats: {}, hp: 100, maxHp: 100, image: '' }
+        };
+        
+        this.round = 1;
+        this.history = [];
+        this.imagesList = [];
+        this.usedImages = []; // FIX: Track imágenes usadas
+        
+        this.ui = new UIController();
+    }
+
+    init() {
+        this.loadImagesFromDOM();
+        this.randomizeFighters();
+        this.ui.updateBalance(this.balance);
+        this.ui.addSystemLog("Sistema cargado correctamente.");
+        this.saveBalance(); // FIX: Save inicial
+    }
+
+    loadImagesFromDOM() {
+        try {
+            const dataContainer = document.getElementById('img-data-container');
+            if (dataContainer && dataContainer.dataset.criaturas) {
+                const rawData = JSON.parse(dataContainer.dataset.criaturas);
+                this.imagesList = rawData.map(img => CONFIG.paths.images + img);
+                console.log("🖼️ Imágenes cargadas:", this.imagesList.length);
+            } else {
+                console.warn("⚠️ No se encontraron datos de imágenes PHP.");
+                this.imagesList = [
+                    'https://via.placeholder.com/150?text=Almeja1', 
+                    'https://via.placeholder.com/150?text=Pez1'
+                ];
+            }
+            
+            this.resultImages = {
+                win: dataContainer ? dataContainer.dataset.ganador : '',
+                lose1: dataContainer ? dataContainer.dataset.derrota1 : '',
+                lose2: dataContainer ? dataContainer.dataset.derrota2 : ''
+            };
+
+        } catch (e) {
+            console.error("❌ Error parseando imágenes PHP:", e);
+        }
+    }
+
+    randomizeFighters() {
+        this.round = 1;
+        this.selectedFighter = null;
+        this.usedImages = []; // FIX: Reset imágenes usadas
+        this.ui.resetHealthBars();
+        this.ui.clearSelection();
+        this.ui.updateRound(1);
+        
+        this.fighters[1] = this.createRandomFighter();
+        
+        do {
+            this.fighters[2] = this.createRandomFighter();
+        } while (
+            this.fighters[2].name === this.fighters[1].name || 
+            this.fighters[2].image === this.fighters[1].image
+        );
+
+        this.ui.renderFighter(1, this.fighters[1]);
+        this.ui.renderFighter(2, this.fighters[2]);
+        this.ui.updateBetNames(
+            this.fighters[1].name, 
+            this.fighters[2].name, 
+            this.fighters[1].image, 
+            this.fighters[2].image
+        );
+    }
+
+    createRandomFighter() {
+        const name = DB_FIGHTER_NAMES[Math.floor(Math.random() * DB_FIGHTER_NAMES.length)];
+        const templateStats = DB_FIGHTER_STATS[Math.floor(Math.random() * DB_FIGHTER_STATS.length)];
+        
+        const variance = () => 0.9 + Math.random() * 0.2;
+        
+        const stats = {
+            power: Math.floor(templateStats.power * variance()),
+            defense: Math.floor(templateStats.defense * variance()),
+            speed: Math.floor(templateStats.speed * variance()),
+            hp: Math.floor(templateStats.hp * variance())
+        };
+
+        // FIX: Seleccionar imagen única
+        let image = '';
+        if (this.imagesList.length > 0) {
+            const availableImages = this.imagesList.filter(img => !this.usedImages.includes(img));
+            if (availableImages.length > 0) {
+                image = availableImages[Math.floor(Math.random() * availableImages.length)];
+                this.usedImages.push(image);
+            } else {
+                image = this.imagesList[Math.floor(Math.random() * this.imagesList.length)];
+            }
+        }
+
+        return {
+            name: name,
+            stats: stats,
+            hp: stats.hp,
+            maxHp: stats.hp,
+            image: image,
+            type: templateStats.type
+        };
+    }
+
+    selectFighter(id) {
+        if (this.isFighting) return;
+        
+        this.selectedFighter = id;
+        this.ui.highlightSelection(id);
+        audioManager.play('click');
+        
+        const name = this.fighters[id].name;
+        this.ui.typeComment(`💰 Has puesto tu fe (y tu dinero) en ${name}.`, 40);
+    }
+
+    startFight() {
+        const inputBet = parseInt(document.getElementById('betAmount').value);
+        
+        if (this.isFighting) return;
+        
+        if (!this.selectedFighter) {
+            alert("⚠️ ¡Debes seleccionar un luchador primero!");
+            return;
+        }
+
+        if (isNaN(inputBet) || inputBet < CONFIG.minBet) {
+            alert(`⚠️ La apuesta mínima es ${CONFIG.minBet}.`);
+            return;
+        }
+
+        if (inputBet > this.balance) {
+            alert("💸 No tienes suficiente saldo. ¡Vende un riñón o algo!");
+            return;
+        }
+
+        this.isFighting = true;
+        this.betAmount = inputBet;
+        this.balance -= this.betAmount;
+        this.saveBalance(); // FIX: Save después de restar
+        this.ui.updateBalance(this.balance);
+        this.ui.toggleControls(false);
+        
+        audioManager.play('cash');
+        this.ui.clearComments();
+        
+        this.ui.typeComment(this.getRandomComment('intro'), CONFIG.delays.typingSpeed);
+        
+        setTimeout(() => {
+            audioManager.play('bell');
+            this.ui.addComment("🔔 ¡ROUND 1! ¡FIGHT!", true);
+            this.battleLoop();
+        }, 3000);
+    }
+
+    battleLoop() {
+        if (!this.isFighting) return;
+
+        if (this.fighters[1].hp <= 0 || this.fighters[2].hp <= 0) {
+            this.endFight();
+            return;
+        }
+
+        const speed1 = this.fighters[1].stats.speed * Math.random();
+        const speed2 = this.fighters[2].stats.speed * Math.random();
+        
+        const attackerId = speed1 > speed2 ? 1 : 2;
+        const defenderId = attackerId === 1 ? 2 : 1;
+
+        this.executeTurn(attackerId, defenderId);
+
+        setTimeout(() => this.battleLoop(), CONFIG.delays.turnDelay);
+    }
+
+    executeTurn(attackerId, defenderId) {
+        const attacker = this.fighters[attackerId];
+        const defender = this.fighters[defenderId];
+
+        let damage = (attacker.stats.power * 0.5) + (Math.random() * 20);
+        let reduction = (defender.stats.defense * 0.3);
+        let finalDamage = Math.max(5, Math.floor(damage - reduction));
+
+        const hitChance = 0.9 - ((defender.stats.speed - attacker.stats.speed) * 0.002);
+        const isHit = Math.random() < hitChance;
+        
+        const isCrit = Math.random() < 0.15;
+
+        // FIX: Mostrar animación de atacante
+        this.ui.animateAttacker(attackerId);
+
+        if (!isHit) {
+            audioManager.play('dodge');
+            this.ui.animateDodge(defenderId);
+            this.ui.typeComment(`${defender.name} esquiva: ` + this.getRandomComment('dodge'), 20);
+        } else {
+            if (isCrit) {
+                finalDamage = Math.floor(finalDamage * 1.8);
+                audioManager.play('crit');
+                this.ui.animateCrit(defenderId);
+                this.ui.addComment(`🔥 CRÍTICO: ${this.getRandomComment('critical')}`, true);
+            } else {
+                audioManager.play(finalDamage > 20 ? 'hit_heavy' : 'hit_light');
+                this.ui.animateHit(defenderId);
+                
+                if (Math.random() > 0.6) {
+                    this.ui.typeComment(this.getRandomComment(finalDamage > 20 ? 'heavyHit' : 'lightHit'), 30);
+                }
+            }
+
+            defender.hp -= finalDamage;
+            this.ui.updateHealth(defenderId, defender.hp, defender.maxHp);
+            this.ui.showDamageNumber(defenderId, finalDamage, isCrit);
+        }
+
+        if (defender.hp > 0 && defender.hp < (defender.maxHp * 0.2) && Math.random() > 0.7) {
+            this.ui.typeComment(this.getRandomComment('lowHp'), 40, true);
+        }
+
+        if (Math.random() > 0.95 && this.fighters[1].hp > 0 && this.fighters[2].hp > 0) {
+            this.round++;
+            this.ui.updateRound(this.round);
+            audioManager.play('bell');
+            this.ui.addComment(`🔔 ROUND ${this.round} - La fatiga se nota...`, true);
+        }
+    }
+
+    endFight() {
+        this.isFighting = false;
+        
+        const winnerId = this.fighters[1].hp > 0 ? 1 : 2;
+        const loserId = winnerId === 1 ? 2 : 1;
+        const playerWon = this.selectedFighter === winnerId;
+        
+        const winnerName = this.fighters[winnerId].name;
+        const loserName = this.fighters[loserId].name;
+
+        if (playerWon) {
+            const winnings = this.betAmount * 2;
+            this.balance += winnings;
+            this.saveBalance(); // FIX: Save después de ganar
+            this.ui.updateBalance(this.balance);
+            
+            audioManager.play('win');
+            this.ui.addComment(this.getRandomComment('win'), true, 'winner');
+            this.ui.showResultModal(true, winnerName, winnings, this.resultImages.win);
+        } else {
+            this.saveBalance(); // FIX: Save después de perder
+            
+            audioManager.play('lose');
+            this.ui.addComment(this.getRandomComment('lose'), true, 'shout');
+            
+            const defeatImg = Math.random() > 0.5 ? this.resultImages.lose1 : this.resultImages.lose2;
+            this.ui.showResultModal(false, loserName, this.betAmount, defeatImg);
+        }
+        
+        this.ui.toggleControls(true);
+    }
+
+    // FIX: Método para guardar balance
+    saveBalance() {
+        try {
+            localStorage.setItem('balance', this.balance);
+        } catch (e) {
+            console.error("❌ Error guardando balance:", e);
+        }
+    }
+
+    getRandomComment(type) {
+        const list = DB_COMMENTS[type] || [];
+        if (list.length === 0) return "...";
+        return list[Math.floor(Math.random() * list.length)];
+    }
+}
+
+// ============================================================================
+// 5. UI CONTROLLER (MANIPULACIÓN DEL DOM)
+// ============================================================================
+
+class UIController {
+    constructor() {
+        this.commentaryBox = document.getElementById('commentary');
+        this.balanceDisplay = document.getElementById('balance');
+        this.startBtn = document.getElementById('startFightBtn');
+        this.typingTimeout = null; // FIX: Para cancelar typing anterior
+    }
+
+    updateBalance(amount) {
+        this.balanceDisplay.innerHTML = `${amount.toLocaleString()} <i class="fas fa-coins money-icon"></i>`;
+        this.balanceDisplay.classList.add('flash');
+        setTimeout(() => this.balanceDisplay.classList.remove('flash'), 500);
+    }
+
+    renderFighter(id, data) {
+        document.getElementById(`name${id}`).textContent = data.name;
+        document.getElementById(`fighter-img-${id}`).src = data.image;
+        document.getElementById(`stats${id}`).innerHTML = 
+            `<i class="fas fa-fist-raised"></i> ${data.stats.power} | ` +
+            `<i class="fas fa-shield-alt"></i> ${data.stats.defense} | ` +
+            `<i class="fas fa-tachometer-alt"></i> ${data.stats.speed}`;
+        
+        const titleEl = document.querySelector(`#fighter-card-${id} .fighter-title`);
+        if(titleEl) titleEl.textContent = `Clase: ${data.type}`;
+    }
+
+    updateBetNames(n1, n2, img1, img2) {
+        document.getElementById('betName1').textContent = n1;
+        document.getElementById('betName2').textContent = n2;
+        document.getElementById('bet-thumb-1').src = img1;
+        document.getElementById('bet-thumb-2').src = img2;
+    }
+
+    resetHealthBars() {
+        this.updateHealth(1, 100, 100);
+        this.updateHealth(2, 100, 100);
+    }
+
+    updateHealth(id, current, max) {
+        const percentage = Math.max(0, (current / max) * 100);
+        const bar = document.getElementById(`health${id}`);
+        
+        bar.style.width = `${percentage}%`;
+        bar.textContent = `${Math.ceil(current)} HP`;
+
+        bar.style.background = percentage > 50 ? 'linear-gradient(90deg, #00ff00, #adff2f)' :
+                               percentage > 25 ? 'linear-gradient(90deg, #ffae00, #ffd700)' :
+                               'linear-gradient(90deg, #ff0000, #ff4d4d)';
+    }
+
+    highlightSelection(id) {
+        document.querySelectorAll('.bet-option').forEach(el => el.classList.remove('selected'));
+        const el = document.getElementById(`betOption${id}`);
+        if(el) el.classList.add('selected');
+    }
+
+    clearSelection() {
+        document.querySelectorAll('.bet-option').forEach(el => el.classList.remove('selected'));
+    }
+
+    toggleControls(enable) {
+        this.startBtn.disabled = !enable;
+        document.getElementById('betAmount').disabled = !enable;
+        
+        // FIX: También deshabilitar botones de selección
+        document.querySelectorAll('.bet-option').forEach(el => {
+            el.style.pointerEvents = enable ? 'auto' : 'none';
+            el.style.opacity = enable ? '1' : '0.6';
+        });
+        
+        if (!enable) {
+            this.startBtn.innerHTML = '<i class="fas fa-skull"></i> PELEA EN CURSO...';
+            this.startBtn.style.background = '#333';
+        } else {
+            this.startBtn.innerHTML = '<i class="fas fa-hand-holding-usd"></i> APOSTAR Y REZAR';
+            this.startBtn.style.background = '';
+        }
+    }
+
+    updateRound(r) {
+        document.getElementById('round').textContent = `ROUND ${r}`;
+    }
+
+    addComment(text, isShout = false, extraClass = '') {
+        const div = document.createElement('div');
+        div.className = `comment ${isShout ? 'shout' : ''} ${extraClass}`;
+        const time = new Date().toLocaleTimeString('es-ES', { hour12: false });
+        div.innerHTML = `<span class="comment-time">[${time}]</span> ${text}`;
+        
+        this.commentaryBox.prepend(div);
+        
+        // FIX: Limitar comentarios para no saturar el DOM
+        const comments = this.commentaryBox.querySelectorAll('.comment');
+        if (comments.length > 50) {
+            comments[comments.length - 1].remove();
+        }
+    }
+
+    typeComment(text, speed, isShout = false) {
+        // FIX: Cancelar typing anterior si existe
+        if (this.typingTimeout) {
+            clearTimeout(this.typingTimeout);
+        }
+
+        const div = document.createElement('div');
+        div.className = `comment ${isShout ? 'shout' : ''}`;
+        const time = new Date().toLocaleTimeString('es-ES', { hour12: false });
+        
+        const textSpan = document.createElement('span');
+        div.innerHTML = `<span class="comment-time">[${time}]</span> `;
+        div.appendChild(textSpan);
+        
+        this.commentaryBox.prepend(div);
+
+        let i = 0;
+        const type = () => {
+            if (i < text.length) {
+                textSpan.textContent += text.charAt(i);
+                i++;
+                this.typingTimeout = setTimeout(type, speed);
+            }
+        };
+        type();
+    }
+
+    clearComments() {
+        this.commentaryBox.innerHTML = '';
+        if (this.typingTimeout) {
+            clearTimeout(this.typingTimeout);
+            this.typingTimeout = null;
+        }
+    }
+
+    addSystemLog(text) {
+        this.addComment(`⚙️ ${text}`, false);
+    }
+
+    // FIX: Animación de atacante
+    animateAttacker(id) {
+        const img = document.getElementById(`fighter-img-${id}`);
+        img.classList.add('attacking');
+        setTimeout(() => img.classList.remove('attacking'), 400);
+    }
+
+    // FIX: Mejorar animación de hit con limpieza correcta
+    animateHit(id) {
+        const img = document.getElementById(`fighter-img-${id}`);
+        img.classList.remove('hit'); // FIX: Remover clase previa
+        void img.offsetWidth; // Force reflow
+        img.classList.add('hit');
+        
+        // FIX: Auto-remover después de animación
+        setTimeout(() => img.classList.remove('hit'), 500);
+    }
+
+    animateCrit(id) {
+        this.animateHit(id);
+        const img = document.getElementById(`fighter-img-${id}`);
+        const originalFilter = img.style.filter;
+        img.style.filter = "brightness(0.5) sepia(1) hue-rotate(-50deg) saturate(5)";
+        setTimeout(() => img.style.filter = originalFilter, 500);
+    }
+
+    animateDodge(id) {
+        const img = document.getElementById(`fighter-img-${id}`);
+        const originalTransform = img.style.transform;
+        const originalOpacity = img.style.opacity;
+        
+        img.style.transform = "translateX(20px) skewX(-10deg)";
+        img.style.opacity = "0.5";
+        
+        setTimeout(() => {
+            img.style.transform = originalTransform;
+            img.style.opacity = originalOpacity;
+        }, 300);
+    }
+
+    showDamageNumber(id, amount, isCrit) {
+        const parent = document.getElementById(`fighter-card-${id}`);
+        const el = document.createElement('div');
+        el.textContent = `-${amount}`;
+        el.style.cssText = `
+            position: absolute;
+            color: ${isCrit ? '#ff0000' : '#fff'};
+            font-size: ${isCrit ? '3rem' : '2rem'};
+            font-weight: bold;
+            text-shadow: 0 0 5px black;
+            left: 50%;
+            top: 40%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+            pointer-events: none;
+            animation: floatUp 1s forwards;
+        `;
+        
+        if (!document.getElementById('dynamic-styles')) {
+            const style = document.createElement('style');
+            style.id = 'dynamic-styles';
+            style.innerHTML = `
+                @keyframes floatUp {
+                    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+                    20% { transform: translate(-50%, -50%) scale(1.2); }
+                    100% { opacity: 0; transform: translate(-50%, -150px) scale(1); }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        parent.style.position = 'relative';
+        parent.appendChild(el);
+        setTimeout(() => el.remove(), 1000);
+    }
+
+    showResultModal(win, name, amount, imgSrc) {
+        const modal = document.getElementById('resultModal');
+        const title = document.getElementById('resultTitle');
+        const msg = document.getElementById('resultMessage');
+        const img = document.getElementById('resultImage');
+        const content = document.querySelector('.result-content');
+
+        title.textContent = win ? "¡GANASTE!" : "¡PERDISTE!";
+        title.style.color = win ? "var(--color-gold)" : "var(--color-red)";
+        
+        msg.innerHTML = win 
+            ? `Tu campeón <strong>${name}</strong> ha triunfado.<br>Ganancia: <span style="color:gold">${amount} $</span>`
+            : `<strong>${name}</strong> ha sido derrotado.<br>Has perdido <span style="color:red">${amount} $</span>.`;
+        
+        img.src = imgSrc || "https://via.placeholder.com/150";
+
+        if (win) {
+            content.classList.remove('lose');
+            content.style.borderColor = 'var(--color-gold)';
+        } else {
+            content.classList.add('lose');
+            content.style.borderColor = 'var(--color-red)';
+        }
+
+        modal.classList.add('show');
+    }
+}
+
+// ============================================================================
+// 6. INICIALIZACIÓN Y EVENTOS
+// ============================================================================
+
+const game = new GameEngine();
+
+document.addEventListener('DOMContentLoaded', () => {
+    game.init();
+    createBubbles();
 });
 
-// ============================================
-// VERIFICACIÓN DE EDAD
-// ============================================
-function enterSite() {
-    const verification = document.getElementById('ageVerification');
-    verification.style.animation = 'fadeOut 0.5s ease';
-    setTimeout(() => {
-        verification.classList.add('hidden');
-        addCommentTyping('💸 Tu cuenta de ahorros nunca volverá a ser la misma. ¡Apostar!', 100);
-    }, 500);
-}
-
-function rejectAccess() {
-    const messages = [
-        '👮 ¡DECISIÓN CORRECTA! Huye a ver Peppa Pig.',
-        '🏃 Vete a ver dibujitos mejor, aquí hay sangre (o líquido marino).',
-        '🚪 Sal de aquí y no vuelvas nunca, salvaste tu aguinaldo.',
-    ];
+window.enterSite = function() {
+    const verif = document.getElementById('ageVerification');
+    verif.style.transition = "opacity 0.5s";
+    verif.style.opacity = "0";
     
-    alert(messages[Math.floor(Math.random() * messages.length)]);
-    
-    // Redirigir a un sitio inofensivo/gracioso (HU-01)
-    setTimeout(() => {
-        window.location.href = 'https://www.youtube.com/watch?v=kYvznlC_65w'; 
-    }, 500);
-}
+    audioManager.init();
+    audioManager.play('click');
 
-// ============================================
-// ANIMACIONES
-// ============================================
+    setTimeout(() => {
+        verif.classList.add('hidden');
+        game.ui.typeComment('Sistema de apuestas inicializado. Bienvenido al abismo.', 50);
+    }, 500);
+};
+
+window.rejectAccess = function() {
+    alert("¡Sabia decisión! Huye mientras puedas.");
+    window.location.href = "https://www.google.com";
+};
+
+window.selectFighter = function(id) {
+    audioManager.init();
+    game.selectFighter(id);
+};
+
+window.startFight = function() {
+    audioManager.init();
+    game.startFight();
+};
+
+window.closeResult = function() {
+    audioManager.play('click');
+    document.getElementById('resultModal').classList.remove('show');
+    
+    setTimeout(() => {
+        game.randomizeFighters();
+        game.ui.addComment("Preparando nuevos contendientes...", false);
+    }, 1000);
+};
+
 function createBubbles() {
     const container = document.getElementById('oceanBg');
-    for (let i = 0; i < 30; i++) {
+    if (!container) return;
+    
+    for (let i = 0; i < 20; i++) {
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        const size = Math.random() * 80 + 30;
-        bubble.style.width = size + 'px';
-        bubble.style.height = size + 'px';
-        bubble.style.left = Math.random() * 100 + '%';
-        bubble.style.animationDelay = Math.random() * 20 + 's';
-        bubble.style.animationDuration = (Math.random() * 15 + 15) + 's';
+        const size = Math.random() * 60 + 20;
+        bubble.style.width = `${size}px`;
+        bubble.style.height = `${size}px`;
+        bubble.style.left = `${Math.random() * 100}%`;
+        bubble.style.animationDelay = `${Math.random() * 10}s`;
+        bubble.style.animationDuration = `${15 + Math.random() * 20}s`;
         container.appendChild(bubble);
     }
 }
 
-// ============================================
-// ESTADO Y LUCHADORES
-// ============================================
-function updateBalance() {
-    document.getElementById('balance').textContent = gameState.balance.toLocaleString('es-ES') + ' 💰';
-    localStorage.setItem('balance', gameState.balance); 
-}
+// Easter Egg: Konami Code
+let konamiCode = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a'];
+let konamiIndex = 0;
 
-function randomizeFighters() {
-    // Elegir nombres únicos
-    const name1 = clamNames[Math.floor(Math.random() * clamNames.length)];
-    let name2 = clamNames[Math.floor(Math.random() * clamNames.length)];
-    while (name2 === name1) {
-        name2 = clamNames[Math.floor(Math.random() * clamNames.length)];
-    }
-    
-    // Elegir stats aleatorios
-    const stats1 = funnyStats[Math.floor(Math.random() * funnyStats.length)];
-    const stats2 = funnyStats[Math.floor(Math.random() * funnyStats.length)];
-    
-    gameState.fighter1Name = name1;
-    gameState.fighter2Name = name2;
-    gameState.fighter1Stats = stats1;
-    gameState.fighter2Stats = stats2;
-    
-    document.getElementById('name1').textContent = name1;
-    document.getElementById('name2').textContent = name2;
-    document.getElementById('betName1').textContent = name1;
-    document.getElementById('betName2').textContent = name2;
-    
-    document.getElementById('stats1').innerHTML = 
-        `🥊 P: ${stats1.power} | 🛡️ D: ${stats1.defense} | ⚡ V: ${stats1.speed}`;
-    document.getElementById('stats2').innerHTML = 
-        `🥊 P: ${stats2.power} | 🛡️ D: ${stats2.defense} | ⚡ V: ${stats2.speed}`;
-
-    // Resetear selección y HP visual
-    gameState.selectedFighter = null;
-    document.getElementById('betOption1').classList.remove('selected');
-    document.getElementById('betOption2').classList.remove('selected');
-    
-    document.getElementById('health1').style.width = '100%';
-    document.getElementById('health2').style.width = '100%';
-    document.getElementById('health1').textContent = '100 HP';
-    document.getElementById('health2').textContent = '100 HP';
-}
-
-// ============================================
-// SELECCIÓN Y APUESTA
-// ============================================
-function selectFighter(fighter) {
-    if (gameState.fightInProgress) {
-        addComment('⚠️ ¡Espera a que termine la masacre actual! 🩸');
-        return;
-    }
-    
-    gameState.selectedFighter = fighter;
-    
-    document.getElementById('betOption1').classList.remove('selected');
-    document.getElementById('betOption2').classList.remove('selected');
-    document.getElementById('betOption' + fighter).classList.add('selected');
-    
-    const fighterName = fighter === 1 ? gameState.fighter1Name : gameState.fighter2Name;
-    addCommentTyping(`💰 Has seleccionado a ${fighterName}. ¡Apuesta y Reza!`, 50);
-}
-
-function startFight() {
-    if (gameState.fightInProgress) return;
-    
-    const betAmountInput = document.getElementById('betAmount');
-    const betAmount = Number(betAmountInput.value);
-    
-    if (!gameState.selectedFighter) {
-        showResult('❌', '¡ALTO AHÍ!', 'Tienes que elegir por cuál almeja apostar, genio 🤦‍♂️');
-        return;
-    }
-    
-    if (betAmount < 50 || isNaN(betAmount) || betAmount > 10000) {
-        showResult('🚫', 'APUESTA RECHAZADA', 'La apuesta debe ser entre 50 y 10,000 💰. ¡Juega limpio!');
-        return;
-    }
-    
-    if (betAmount > gameState.balance) {
-        showResult('💸', 'SIN FONDOS', `No tienes suficiente dinero. ¡Recarga!`);
-        return;
-    }
-    
-    // Descontar apuesta (HU-02)
-    gameState.balance -= betAmount;
-    gameState.betAmount = betAmount;
-    updateBalance();
-    
-    // Bloquear controles y resetear estado
-    gameState.fightInProgress = true;
-    document.getElementById('startFightBtn').disabled = true;
-    document.getElementById('startFightBtn').textContent = '⚔️ PELEA EN CURSO ⚔️';
-    
-    gameState.hp1 = 100;
-    gameState.hp2 = 100;
-    gameState.round = 1;
-    updateHealthBars();
-    document.getElementById('round').textContent = 'PREPARANDO...';
-    document.getElementById('commentary').innerHTML = '';
-    
-    // Secuencia de comentarios pre-pelea
-    addCommentTyping(comments.start[Math.floor(Math.random() * comments.start.length)], 80);
-    setTimeout(() => addCommentTyping(comments.beforeFight[Math.floor(Math.random() * comments.beforeFight.length)], 70), 4000);
-    setTimeout(() => {
-        addComment('🔔 ¡ROUND 1... FIGHT! 💀', true);
-        document.getElementById('round').textContent = 'ROUND 1';
-        fightLoop(); 
-    }, 6000);
-}
-
-// ============================================
-// LOOP DE PELEA
-// ============================================
-let fightInterval;
-
-function fightLoop() {
-    fightInterval = setInterval(() => {
-        if (gameState.hp1 <= 0 || gameState.hp2 <= 0) {
-            clearInterval(fightInterval);
-            endFight();
-            return;
+document.addEventListener('keydown', (e) => {
+    if (e.key === konamiCode[konamiIndex]) {
+        konamiIndex++;
+        if (konamiIndex === konamiCode.length) {
+            game.balance += 10000;
+            game.saveBalance(); // FIX: Guardar el cheat
+            game.ui.updateBalance(game.balance);
+            audioManager.play('win');
+            alert("CHEAT ACTIVADO: +10,000$ (Sucio tramposo)");
+            konamiIndex = 0;
         }
-
-        const attacker = Math.random() > 0.5 ? 1 : 2;
-        const target = attacker === 1 ? 2 : 1;
-        
-        const statsAttacker = attacker === 1 ? gameState.fighter1Stats : gameState.fighter2Stats;
-        const statsTarget = target === 1 ? gameState.fighter1Stats : gameState.fighter2Stats;
-
-        // Cálculo de Daño
-        let baseDamage = Math.floor(Math.random() * 15) + 10;
-        baseDamage += Math.floor(statsAttacker.power / 10);
-        
-        const defenseModifier = statsTarget.defense / 100;
-        let finalDamage = Math.round(baseDamage * (1 - defenseModifier * 0.4));
-        
-        const isCritical = Math.random() > 0.85;
-        // Velocidad vs Potencia para esquivar
-        const isDodge = Math.random() > (0.95 - (statsTarget.speed / 200)); 
-        
-        if (isCritical) {
-            finalDamage *= 2;
-        }
-
-        if (!isDodge) {
-            if (target === 1) {
-                gameState.hp1 -= finalDamage;
-            } else {
-                gameState.hp2 -= finalDamage;
-            }
-            animateAttack(attacker, finalDamage);
-        }
-        
-        gameState.hp1 = Math.max(0, gameState.hp1);
-        gameState.hp2 = Math.max(0, gameState.hp2);
-
-        updateHealthBars();
-        
-        // Generar comentarios dinámicos
-        setTimeout(() => {
-            if (isDodge) {
-                addCommentTyping(comments.dodge[Math.floor(Math.random() * comments.dodge.length)], 50);
-            } else if (isCritical) {
-                addComment(comments.critical[Math.floor(Math.random() * comments.critical.length)], true);
-            } else {
-                addCommentTyping(comments.hit[Math.floor(Math.random() * comments.hit.length)].replace('💥', '💥 ' + finalDamage + ' dmg!'), 40);
-            }
-        }, 300);
-        
-        // Comentarios de HP bajo, chef o público aleatorios
-        if ((gameState.hp1 < 30 || gameState.hp2 < 30) && Math.random() > 0.6) {
-            setTimeout(() => addCommentTyping(comments.lowHP[Math.floor(Math.random() * comments.lowHP.length)], 60), 1000);
-        } else if (Math.random() > 0.85) {
-            const randomComments = [...comments.audience, ...comments.chef];
-            setTimeout(() => addCommentTyping(randomComments[Math.floor(Math.random() * randomComments.length)], 50), 1000);
-        }
-        
-        // Simulación de nuevo round
-        if (gameState.hp1 > 0 && gameState.hp2 > 0 && (gameState.hp1 < 80 || gameState.hp2 < 80) && Math.random() > 0.95) {
-            gameState.round++;
-            addComment(comments.round[Math.floor(Math.random() * comments.round.length)].replace('{round}', gameState.round), true);
-            document.getElementById('round').textContent = `ROUND ${gameState.round}`;
-        }
-        
-    }, 1500); 
-}
-
-function animateAttack(attacker, damage) {
-    // El contenedor en el HTML usa id="fighter-card-1" / "fighter-card-2"
-    const fighterElement = document.getElementById('fighter-card-' + attacker);
-    if (!fighterElement) return; // seguridad para evitar errores si cambia el DOM
-    fighterElement.classList.add('attacking');
-    
-    // Crear y animar daño flotante
-    const damagePopup = document.createElement('div');
-    damagePopup.className = 'damage-popup';
-    damagePopup.textContent = `-${damage}`;
-    damagePopup.style.position = 'absolute';
-    damagePopup.style.top = '20%';
-    damagePopup.style.left = '50%';
-    damagePopup.style.transform = 'translate(-50%, -50%)';
-    damagePopup.style.fontWeight = 'bold';
-    damagePopup.style.fontSize = '2rem';
-    damagePopup.style.textShadow = '0 0 10px black';
-    damagePopup.style.color = damage >= 30 ? 'var(--color-red)' : 'white';
-    damagePopup.style.animation = 'damage-fade 1s forwards';
-    fighterElement.appendChild(damagePopup);
-    
-    // Remover clase y popup después de la animación
-    setTimeout(() => {
-        fighterElement.classList.remove('attacking');
-        fighterElement.removeChild(damagePopup);
-    }, 500);
-    
-    if (!document.getElementById('damage-style')) {
-        const style = document.createElement('style');
-        style.id = 'damage-style';
-        style.innerHTML = '@keyframes damage-fade { 0% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -100px); } }';
-        document.head.appendChild(style);
-    }
-}
-
-function updateHealthBars() {
-    function updateBar(hp, id) {
-        const bar = document.getElementById('health' + id);
-        bar.style.width = hp + '%';
-        bar.textContent = `${hp} HP`;
-        
-        // Cambio de color visual en la barra
-        let color;
-        if (hp > 70) color = 'linear-gradient(90deg, #4CAF50, #90EE90)';
-        else if (hp > 30) color = 'linear-gradient(90deg, #FFD700, #FFA500)';
-        else color = 'linear-gradient(90deg, #FF0000, #C70735)';
-        
-        bar.style.background = color;
-    }
-
-    updateBar(gameState.hp1, 1);
-    updateBar(gameState.hp2, 2);
-}
-
-// ============================================
-// FINALIZAR PELEA
-// ============================================
-function endFight() {
-    let winner, prize, message, resultTitle, resultIcon, modalClass = '';
-    const multiplier = gameState.selectedFighter === 1 ? 1.8 : 2.1; 
-
-    const winnerId = gameState.hp1 <= 0 && gameState.hp2 <= 0 ? 0 : (gameState.hp1 > gameState.hp2 ? 1 : 2);
-    const loserId = winnerId === 1 ? 2 : 1;
-    
-    // Determinar si el usuario ganó su apuesta
-    const userWon = winnerId === gameState.selectedFighter;
-    const winningClamName = winnerId === 1 ? gameState.fighter1Name : gameState.fighter2Name;
-    const losingClamName = loserId === 1 ? gameState.fighter1Name : gameState.fighter2Name;
-
-    if (userWon) {
-        prize = Math.round(gameState.betAmount * multiplier);
-        gameState.balance += prize;
-        resultTitle = '🎉 ¡VICTORIA DE CONCHA! 🎉';
-        resultIcon = '🏆';
-        message = `¡Tu almeja, ${winningClamName}, sobrevivió! Ganaste ${prize.toLocaleString('es-ES')} 💰.`;
-        
-        // Resaltar anuncio de victoria en el feed
-        addComment(comments.win[Math.floor(Math.random() * comments.win.length)].replace('La ganadora', `¡${winningClamName} (TU ALMEJA)!`), true, 'winner');
     } else {
-        prize = 0; 
-        resultTitle = '💔 ¡DERROTA CRUEL! 💔';
-        resultIcon = '🔪';
-        message = `Tu almeja, ${losingClamName}, perdió y fue enviada a la cocina. Perdiste ${gameState.betAmount.toLocaleString('es-ES')} 💰.`;
-        
-        // Resaltar anuncio de derrota en el feed
-        addComment(`😭 El Pulpo Locutor: ¡La almeja ${losingClamName} será el plato de fondo! ¡Adiós a tu dinero!`, true, 'shout');
+        konamiIndex = 0;
     }
-
-    gameState.fightInProgress = false;
-    document.getElementById('startFightBtn').disabled = false;
-    document.getElementById('startFightBtn').textContent = '🥊 INICIAR OTRA PELEA Y APOSTAR 🥊';
-    updateBalance();
-    
-    showResult(resultIcon, resultTitle, message);
-    
-    setTimeout(randomizeFighters, 5000); 
-}
-
-/** Muestra el modal de resultado */
-function showResult(icon, title, message) {
-    document.getElementById('resultIcon').textContent = icon;
-    document.getElementById('resultTitle').textContent = title;
-    document.getElementById('resultMessage').textContent = message;
-    
-    const modal = document.getElementById('resultModal');
-    modal.classList.add('show');
-    
-    // Limpiar clases de animación y aplicar las de victoria/derrota
-    const content = document.querySelector('.result-content');
-    content.className = 'result-content'; // Reset
-    if (icon === '🏆') {
-        content.style.borderColor = 'var(--color-gold)';
-        content.style.boxShadow = '0 0 50px var(--color-gold)';
-    } else {
-        content.style.borderColor = 'var(--color-red)';
-        content.style.boxShadow = '0 0 50px var(--color-red)';
-    }
-}
-
-/** Cierra el modal de resultado */
-function closeResult() {
-    document.getElementById('resultModal').classList.remove('show');
-}
-// ============================================
-// ESTADO DEL JUEGO
-// ============================================
-
-// ============================================
-// RECURSOS GRÁFICOS Y DATOS (URLs de Imagenes)
-// ============================================
-// Lista de imágenes para los luchadores. Se inicializa vacía y se pobl
-//ará desde el atributo `data-criaturas` en `index.php` al cargar el DOM.
-let fighterImages = [];
-
-const victoryImage = 'https://media.giphy.com/media/l41lUjUgLLwWrz20w/giphy.gif'; // Minion celebrando o similar
-const defeatImage = 'https://i.imgur.com/5c9Qh8X.gif'; // Chef cocinando (Derrota)
-
-
-
-
-
-// ============================================
-// COMENTARIOS DEL PULPO LOCUTOR
-// ============================================
-
-
-// ============================================
-// INICIALIZACIÓN
-// ============================================
-document.addEventListener('DOMContentLoaded', () => {
-    updateBalance();
-    randomizeFighters();
-    addCommentTyping('🎙️ Iniciando transmisión... ¡Hagan sus apuestas, degenerados!', 50);
 });
 
-// ============================================
-// VERIFICACIÓN DE EDAD
-// ============================================
-function enterSite() {
-    const verification = document.getElementById('ageVerification');
-    verification.style.opacity = '0';
-    setTimeout(() => {
-        verification.classList.add('hidden');
-        addCommentTyping('💸 Nuevo apostador detectado. Preparando sistema de desplume...', 50);
-    }, 500);
-}
-
-function rejectAccess() {
-    alert("¡Buena decisión! Vete a ver Peppa Pig y ahorra tu dinero.");
-    window.location.href = "https://www.google.com";
-}
-
-// ============================================
-// FUNCIONES DEL JUEGO
-// ============================================
-function updateBalance() {
-    document.getElementById('balance').textContent = gameState.balance.toLocaleString() + ' $';
-    localStorage.setItem('balance', gameState.balance); 
-}
-
-function randomizeFighters() {
-    // Nombres aleatorios
-    const name1 = clamNames[Math.floor(Math.random() * clamNames.length)];
-    let name2 = clamNames[Math.floor(Math.random() * clamNames.length)];
-    while (name2 === name1) name2 = clamNames[Math.floor(Math.random() * clamNames.length)];
-    
-    // Stats aleatorios
-    const stats1 = funnyStats[Math.floor(Math.random() * funnyStats.length)];
-    const stats2 = funnyStats[Math.floor(Math.random() * funnyStats.length)];
-    
-    // Imágenes aleatorias
-    const img1 = fighterImages[Math.floor(Math.random() * fighterImages.length)];
-    let img2 = fighterImages[Math.floor(Math.random() * fighterImages.length)];
-    while(img2 === img1) img2 = fighterImages[Math.floor(Math.random() * fighterImages.length)];
-
-    // Guardar en estado
-    gameState.fighter1Name = name1;
-    gameState.fighter2Name = name2;
-    gameState.fighter1Stats = stats1;
-    gameState.fighter2Stats = stats2;
-    
-    // Actualizar DOM (Texto)
-    document.getElementById('name1').textContent = name1;
-    document.getElementById('name2').textContent = name2;
-    document.getElementById('betName1').textContent = name1;
-    document.getElementById('betName2').textContent = name2;
-    
-    // Actualizar DOM (Imágenes)
-    document.getElementById('fighter-img-1').src = img1;
-    document.getElementById('fighter-img-2').src = img2;
-    document.getElementById('bet-thumb-1').src = img1;
-    document.getElementById('bet-thumb-2').src = img2;
-    
-    // Actualizar Stats visuales
-    document.getElementById('stats1').innerHTML = `Poder: ${stats1.power} | Def: ${stats1.defense}`;
-    document.getElementById('stats2').innerHTML = `Poder: ${stats2.power} | Def: ${stats2.defense}`;
-
-    // Resetear Barras
-    gameState.hp1 = 100;
-    gameState.hp2 = 100;
-    updateHealthBars();
-    
-    // Resetear Selección
-    gameState.selectedFighter = null;
-    document.getElementById('betOption1').classList.remove('selected');
-    document.getElementById('betOption2').classList.remove('selected');
-}
-
-function selectFighter(fighter) {
-    if (gameState.fightInProgress) return;
-    gameState.selectedFighter = fighter;
-    
-    document.getElementById('betOption1').classList.remove('selected');
-    document.getElementById('betOption2').classList.remove('selected');
-    document.getElementById('betOption' + fighter).classList.add('selected');
-    
-    const name = fighter === 1 ? gameState.fighter1Name : gameState.fighter2Name;
-    addCommentTyping(`💰 Has seleccionado a ${name}. ¡Reza lo que sepas!`, 30);
-}
-
-function startFight() {
-    if (gameState.fightInProgress) return;
-    
-    const betInput = document.getElementById('betAmount');
-    const amount = parseInt(betInput.value);
-    
-    if (!gameState.selectedFighter) {
-        alert("¡Elige un luchador primero! No leas la mente.");
-        return;
-    }
-    if (isNaN(amount) || amount < 50) {
-        alert("¡Apuesta mínima 50$! No seas tacaño.");
-        return;
-    }
-    if (amount > gameState.balance) {
-        alert("No tienes dinero. ¿Aceptas pagar con un riñón?");
-        return;
-    }
-    
-    gameState.betAmount = amount;
-    gameState.balance -= amount;
-    updateBalance();
-    
-    gameState.fightInProgress = true;
-    document.getElementById('startFightBtn').disabled = true;
-    document.getElementById('startFightBtn').innerText = "PELEA EN CURSO...";
-    document.getElementById('commentary').innerHTML = "";
-    
-    addCommentTyping("🔔 ¡DING DING! ¡QUE COMIENCE LA MASACRE!", 50, true);
-    
-    fightLoop();
-}
-
-function fightLoop() {
-    let interval = setInterval(() => {
-        if (gameState.hp1 <= 0 || gameState.hp2 <= 0) {
-            clearInterval(interval);
-            endFight();
-            return;
-        }
-        
-        // Lógica de ataque simple
-        const attacker = Math.random() > 0.5 ? 1 : 2;
-        const damage = Math.floor(Math.random() * 20) + 5;
-        const isCrit = Math.random() > 0.8;
-        const finalDamage = isCrit ? damage * 2 : damage;
-        
-        // Animación visual
-        const imgAttacker = document.getElementById(`fighter-img-${attacker}`);
-        const imgVictim = document.getElementById(`fighter-img-${attacker === 1 ? 2 : 1}`);
-        
-        imgAttacker.classList.add('attacking');
-        setTimeout(() => imgAttacker.classList.remove('attacking'), 200);
-        
-        if (attacker === 1) gameState.hp2 -= finalDamage;
-        else gameState.hp1 -= finalDamage;
-        
-        // Efecto visual en víctima
-        imgVictim.classList.add('hit');
-        setTimeout(() => imgVictim.classList.remove('hit'), 400);
-        
-        updateHealthBars();
-        
-        // Comentarios
-        if (isCrit) {
-            addCommentTyping(comments.critical[Math.floor(Math.random() * comments.critical.length)], 20, true);
-        } else {
-            addCommentTyping(comments.hit[Math.floor(Math.random() * comments.hit.length)], 20);
-        }
-        
-    }, 1000);
-}
-
-function updateHealthBars() {
-    const hp1 = Math.max(0, gameState.hp1);
-    const hp2 = Math.max(0, gameState.hp2);
-    
-    document.getElementById('health1').style.width = hp1 + '%';
-    document.getElementById('health1').innerText = hp1 + '%';
-    document.getElementById('health2').style.width = hp2 + '%';
-    document.getElementById('health2').innerText = hp2 + '%';
-    
-    // Cambiar color si está bajo
-    const bar1 = document.getElementById('health1');
-    if(hp1 < 30) bar1.style.background = 'red';
-    else bar1.style.background = 'linear-gradient(90deg, #00ff00, #adff2f)';
-    
-    const bar2 = document.getElementById('health2');
-    if(hp2 < 30) bar2.style.background = 'red';
-    else bar2.style.background = 'linear-gradient(90deg, #00ff00, #adff2f)';
-}
-
-function endFight() {
-    gameState.fightInProgress = false;
-    document.getElementById('startFightBtn').disabled = false;
-    document.getElementById('startFightBtn').innerText = "¡TIRA EL DINERO! 💸";
-    
-    const winner = gameState.hp1 > 0 ? 1 : 2;
-    const userWon = winner === gameState.selectedFighter;
-    
-    const modal = document.getElementById('resultModal');
-    const title = document.getElementById('resultTitle');
-    const msg = document.getElementById('resultMessage');
-    const img = document.getElementById('resultImage');
-    const content = document.querySelector('.result-content');
-    
-    if (userWon) {
-        const winAmount = gameState.betAmount * 2;
-        gameState.balance += winAmount;
-        title.innerText = "¡GANASTE!";
-        msg.innerText = `Tu almeja destrozó a la otra. Ganaste ${winAmount}$.`;
-        img.src = victoryImage; // GIF Victoria
-        content.classList.remove('lose');
-        addCommentTyping("🏆 ¡TENEMOS UN GANADOR! (Y un perdedor delicioso)", 50, true);
-    } else {
-        title.innerText = "¡PERDISTE!";
-        msg.innerText = "Tu luchador ahora es una paella. La casa agradece tu donación.";
-        img.src = defeatImage; // GIF Derrota (Chef)
-        content.classList.add('lose');
-        addCommentTyping("👨‍🍳 El chef se lleva al perdedor...", 50, true);
-    }
-    updateBalance();
-    
-    modal.classList.add('show');
-    
-    // Reiniciar pelea en 3 seg despues de cerrar modal
-}
-
-function closeResult() {
-    document.getElementById('resultModal').classList.remove('show');
-    setTimeout(randomizeFighters, 1000);
-}
-
-// Utilidad para escribir texto
-function addCommentTyping(text, speed, isShout = false) {
-    const box = document.getElementById('commentary');
-    const p = document.createElement('div');
-    p.className = 'comment';
-    if(isShout) p.classList.add('shout');
-    
-    box.prepend(p); // Añadir arriba
-    
-    let i = 0;
-    function type() {
-        if(i < text.length) {
-            p.textContent += text.charAt(i);
-            i++;
-            setTimeout(type, speed);
-        }
-    }
-    type();
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Seleccionamos los elementos
-    const openBtn = document.getElementById('openLiveBtn');
-    const closeBtn = document.getElementById('closeLiveBtn');
-    const overlay = document.getElementById('fakeLiveOverlay');
-    const video = document.getElementById('liveVideo');
-
-    // 2. Función para ABRIR el directo
-    openBtn.addEventListener('click', (e) => {
-        e.preventDefault(); // Evita cualquier comportamiento por defecto
-        
-        overlay.classList.add('active'); // Muestra el overlay
-        video.currentTime = 0; // Reinicia el video (opcional)
-        video.play(); // Empieza a reproducir
-        
-        // Opcional: Si quieres que tenga sonido al abrir, descomenta la linea de abajo
-        // video.muted = false; 
-    });
-
-    // 3. Función para CERRAR el directo
-    const closeLive = () => {
-        overlay.classList.remove('active'); // Oculta el overlay
-        video.pause(); // PAUSA el video
-    };
-
-    // Cerrar con el botón X
-    closeBtn.addEventListener('click', closeLive);
-
-    // Cerrar si hacen clic fuera del video (en el fondo oscuro)
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) {
-            closeLive();
-        }
-    });
-});
+// Exponer para debug
+window.game = game;

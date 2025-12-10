@@ -420,7 +420,7 @@ text-align: center;
 .fighter-card {
 background: linear-gradient(135deg, rgba(21, 69, 253, 0.3), rgba(199, 7, 53, 0.3));
 border: 2px solid var(--color-gold);
-border-radius: 15px;
+border-radius: 5px;
 padding: 1.5rem;
 transition: all 0.3s ease;
 }
@@ -430,7 +430,7 @@ width: 180px;
 height: 180px;
 object-fit: contain; /* Asegura que la imagen de la almeja se vea bien */
 background: rgba(0, 0, 0, 0.3); /* Fondo semitransparente para el círculo */
-border-radius: 50%;
+border-radius: 0%;
 display: flex;
 align-items: center;
 justify-content: center;
@@ -452,24 +452,25 @@ animation: attackShake 0.4s ease;
 }
 
 @keyframes attackShake {
-0%, 100% { transform: rotate(0deg) scale(1); }
-25% { transform: rotate(-10deg) scale(1.15); }
-50% { transform: rotate(10deg) scale(1.15); }
-75% { transform: rotate(-5deg) scale(1.1); }
+    0%, 100% { transform: rotate(0deg) scale(1); }
+    25% { transform: rotate(-10deg) scale(1.15); }
+    50% { transform: rotate(10deg) scale(1.15); }
+    75% { transform: rotate(-5deg) scale(1.1); }
 }
 
 .fighter-name {
-font-size: 1.6rem;
-color: var(--color-gold);
-margin-bottom: 0.5rem;
-text-shadow: 0 0 8px var(--color-gold);
-word-break: break-word; /* Evita desbordamiento de nombres largos */
+    padding: 1%;
+    font-size: 1.6rem;
+    color: var(--color-gold);
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 8px var(--color-gold);
+    word-break: break-word; /* Evita desbordamiento de nombres largos */
 }
 
 .fighter-stats {
-font-size: 0.9rem;
-color: var(--color-turquoise);
-margin-bottom: 1rem;
+    font-size: 0.9rem;
+    color: var(--color-turquoise);
+    margin-bottom: 1rem;
 }
 
 .stat-icon {
@@ -565,10 +566,17 @@ transition: all 0.3s ease;
 }
 
 .bet-clam-icon {
-width: 60px;
-height: 60px;
-object-fit: contain;
-margin: 10px 0;
+    width: 60px;
+    height: 60px;
+    border-radius: 5%;
+    object-fit: cover;
+    border: 4px solid var(--color-gold);
+    margin: 0 auto 1rem;
+    box-shadow: 0 0 20px var(--color-gold);
+    background: #000;
+    transform: scale(1.2);
+    transition: all 0.3s ease;
+
 }
 
 .bet-option:hover {
@@ -790,17 +798,20 @@ visibility: visible;
 }
 
 .result-content {
-background: linear-gradient(135deg, var(--color-blue-dark), var(--color-red));
-border: 5px solid var(--color-gold);
-border-radius: 20px;
-padding: 3rem;
-text-align: center;
-max-width: 600px;
-width: 90%;
-transform: scale(0.8);
-transition: transform 0.3s ease;
+    background: linear-gradient(135deg, var(--color-blue-dark), var(--color-red));
+    border: 5px solid var(--color-gold);
+    border-radius: 20px;
+    padding: 3rem;
+    text-align: center;
+    max-width: 600px;
+    width: 90%;
+    height: 500px;
+    transition: transform 0.3s ease;
 }
-
+.result-content>*{
+    display: flex;
+    align-items: flex-end
+}
 .result-modal.show .result-content {
 transform: scale(1);
 }
@@ -1029,7 +1040,7 @@ body {
     background: var(--color-card-bg);
     border: 1px solid var(--color-blue-dark);
     box-shadow: 0 0 15px rgba(21, 69, 253, 0.4);
-    border-radius: 10px;
+    border-radius: 5px;
     padding: 0; /* Sin padding general */
     overflow: hidden;
     display: flex;
@@ -1435,8 +1446,8 @@ header {
 .fighter-card {
     background: var(--color-card-bg);
     border: 2px solid var(--color-gold);
-    border-radius: 20px;
-    padding: 1.5rem;
+    border-radius: 5px;
+    padding: 2.5rem;
     text-align: center;
     transition: transform 0.3s;
     box-shadow: 0 0 30px rgba(0,0,0,0.5);
@@ -1451,12 +1462,13 @@ header {
 .fighter-avatar {
     width: 180px;
     height: 180px;
-    border-radius: 50%;
+    border-radius: 5%;
     object-fit: cover;
     border: 4px solid var(--color-gold);
     margin: 0 auto 1rem;
     box-shadow: 0 0 20px var(--color-gold);
     background: #000;
+    transform: scale(1.2);
     transition: all 0.3s ease;
 }
 
@@ -1737,9 +1749,17 @@ header {
 .result-icon-img {
     width: 150px;
     height: 150px;
-    object-fit: contain;
-    margin-bottom: 1rem;
-    filter: drop-shadow(0 0 20px var(--color-gold));
+    object-fit: cover; /* Asegura que la imagen de la almeja se vea bien */
+    background: rgba(0, 0, 0, 0.3); /* Fondo semitransparente para el círculo */
+    border-radius: 0%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1rem;
+    border: 4px solid var(--color-gold);
+    box-shadow: 0 0 20px rgba(228, 197, 37, 0.7);
+    animation: avatarFloat 3s infinite ease-in-out;
+    transition: all 0.2s ease-in-out;
 }
 
 .result-content.lose .result-icon-img {
@@ -1760,80 +1780,4 @@ header {
     .vs-section { margin: 1rem 0; }
     .neon-text h1 { font-size: 1.5rem; }
     .fighter-avatar { width: 140px; height: 140px; }
-}
-
-/* 1. EL FONDO (OVERLAY) */
-.live-overlay {
-    position: fixed;       /* Se queda fijo en la pantalla aunque hagas scroll */
-    top: 0;
-    left: 0;
-    width: 100vw;          /* 100% del ancho de la ventana */
-    height: 100vh;         /* 100% del alto de la ventana (IMPORTANTE para centrar) */
-    background-color: rgba(0, 0, 0, 0.95); /* Casi negro total para enfocar atención */
-    z-index: 10000;        /* Muy alto para tapar menú, chat, etc. */
-    
-    /* LA MAGIA DEL CENTRADO */
-    display: none;         /* Oculto por defecto */
-    justify-content: center; /* Centrado Horizontal */
-    align-items: center;     /* Centrado Vertical */
-    flex-direction: column;
-}
-
-/* Cuando se activa con JS, le damos display flex para que funcionen los centrados */
-.live-overlay.active {
-    display: flex; 
-}
-
-/* 2. EL CONTENEDOR DEL VIDEO */
-.video-container {
-    position: relative;    /* Para poder posicionar la X de cerrar respecto a esto */
-    width: 90%;            /* Ocupa el 90% del ancho en móviles */
-    max-width: 1000px;     /* Pero no te pases de 1000px en PC */
-    aspect-ratio: 16/9;    /* Mantiene la forma rectangular de video */
-    background: black;
-    box-shadow: 0 0 30px rgba(255, 0, 0, 0.6); /* Resplandor rojo */
-    display: flex;         /* Para asegurar que el video llene el hueco */
-}
-
-/* 3. EL VIDEO */
-.video-container video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain; /* Asegura que se vea todo el video sin recortes */
-}
-
-/* 4. BOTÓN DE CERRAR (X) MEJORADO */
-.close-btn {
-    position: absolute;
-    top: -40px;    /* Lo sacamos un poco por arriba del video */
-    right: -10px;   /* A la derecha */
-    background: none;
-    border: none;
-    color: white;
-    font-size: 2rem;
-    cursor: pointer;
-    z-index: 20;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.8); /* Sombra para que se lea siempre */
-}
-
-.close-btn:hover {
-    color: #ff4444;
-    transform: scale(1.1);
-}
-
-/* 5. ETIQUETA "EN VIVO" */
-.live-badge {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background-color: #cc0000;
-    color: white;
-    padding: 5px 12px;
-    font-family: sans-serif;
-    font-weight: 800;
-    font-size: 0.85rem;
-    border-radius: 4px;
-    z-index: 15;
-    letter-spacing: 1px;
-    pointer-events: none; /* Para que no moleste al clic */
 }

@@ -1,7 +1,7 @@
 <?php
 // Rutas de las imágenes de las criaturas (para la pelea)
 $base_img_url = "../assets/images/";
-// Icono/Logo (archivo en `src/assets/icons/logo.png`)
+// Icono/Logo (archivo en `../assets/icons/logo.png`)
 $logo_icon = "../assets/icons/logo.png";
 
 // LUCHADORES
@@ -10,24 +10,25 @@ $criaturas_marinas = [
     "almeja1.png",
     "almeja2.jpeg",
     "almeja3.webp",
-    "pezFeoGanador.webp", // Ejemplo de criatura 4
-    "Pez_Travis_Scott.jpg", // Ejemplo de criatura 5
+    "bobEsponjaMalvado.jpg",
+    "calamardoMalvado.webp",
+    "pezMamador.jpg", // Ejemplo de criatura 5
     "pezTriste.jpg", // Ejemplo de criatura 6
     "pezDientudo.jpg" // Ejemplo de criatura 7
 ];
 
 // RESULTADOS (Las imágenes de los platos cocinados y el ganador)
-$img_ganador = $base_img_url . "pezFeoGanador.webp"; // Imagen de victoria/ganador
-$img_derrota_1 = $base_img_url . "almejaCocinada.jpeg"; // Imagen de almejas cocinadas
-$img_derrota_2 = $base_img_url . "pezCocinado.webp"; // Imagen de pez cocinado
-$img_chef = $base_img_url . "chef_macabro.gif"; // Usaremos un GIF para el icono de derrota
+$img_ganador = "../assets/images/pezFeoGanador.webp"; // Imagen de victoria/ganador
+$img_derrota_1 = "../assets/images/almejaCocinada.jpeg"; // Imagen de almejas cocinadas
+$img_derrota_2 = "../assets/images/pezCocinado.webp"; // Imagen de pez cocinado
+
 
 // OTROS JUEGOS (Se mantienen las rutas, asumiendo que existen)
-$gif_ruleta = $img_ganador; // fallback: imagen existente
-$gif_tragaperlas = $img_ganador; // fallback: imagen existente
-$img_blackjack = $img_ganador; // fallback: imagen existente
-$gif_cangrejo = $base_img_url . "pezTriste.jpg"; // usar imagen existente
-$img_poker = $img_ganador; // fallback: imagen existente
+$gif_ruleta = "../assets/icons/ruleta.png"; // fallback: imagen existente
+$gif_tragaperlas = "../assets/icons/tragaPerras.png"; // fallback: imagen existente
+$img_blackjack = "../assets/icons/blackJack.png"; // fallback: imagen existente
+$gif_cangrejo = "../assets/icons/cangrejo.png"; // usar imagen existente
+$img_poker = "../assets/icons/poker.png"; // fallback: imagen existente
 ?>
 
 <!DOCTYPE html>
@@ -95,22 +96,9 @@ $img_poker = $img_ganador; // fallback: imagen existente
                 </div>
             </div>
             
-            <button id="openLiveBtn" class="live-btn">
+            <button class="live-btn" onclick="alert('El directo está cargando...')">
                 <i class="fas fa-satellite-dish live-icon"></i> EN VIVO
             </button>
-
-        <div id="fakeLiveOverlay" class="live-overlay">
-    
-            <button id="closeLiveBtn" class="close-btn">
-                <i class="fas fa-times"></i>
-            </button>
-
-            <div class="video-container">
-                <div class="live-badge">🔴 EN VIVO</div>
-        
-                <video id="liveVideo" src="../videos/directo_almejas.mp4" loop playsinline></video>
-            </div>
-        </div>
             
             <div class="balance" id="balance">10,000 <i class="fas fa-coins money-icon"></i></div>
         </div>
@@ -127,7 +115,7 @@ $img_poker = $img_ganador; // fallback: imagen existente
                 <!-- LUCHADOR 1 -->
                 <div class="fighter" id="fighter-card-1">
                     <div class="fighter-card">
-                        <img src="" alt="Criatura 1" class="fighter-avatar" id="fighter-img-1">
+                        <img src="/assets/images/pezMamador.jpg" alt="Criatura 1" class="fighter-avatar" id="fighter-img-1">
                         <div class="fighter-info">
                             <div class="fighter-name" id="name1"></div>
                             <div class="fighter-title">"El Conquistador del Fondo"</div>
@@ -182,27 +170,24 @@ $img_poker = $img_ganador; // fallback: imagen existente
             <h3 class="arena-title"><i class="fas fa-dice slot-icon"></i> OTROS JUEGOS DEL OCÉANO</h3>
             
             <div class="games-carousel">
-                <div class="game-card" onclick="window.location.href='ruleta.php'">
+                <!-- Se mantienen las imágenes de los minijuegos -->
+                <div class="game-card" onclick="alert('Cargando Ruleta...')">
                     <img src="<?php echo $gif_ruleta; ?>" alt="Ruleta GIF" class="game-icon-img">
                     <div class="game-name">Ruleta Almejil</div>
                 </div>
-
-                <div class="game-card" onclick="window.location.href='tragaperlas.php'">
+                <div class="game-card" onclick="alert('Cargando Tragaperlas...')">
                     <img src="<?php echo $gif_tragaperlas; ?>" alt="Tragaperlas GIF" class="game-icon-img">
                     <div class="game-name">Tragaperlas 777</div>
                 </div>
-
-                <div class="game-card" onclick="window.location.href='poker.php'">
+                <div class="game-card" onclick="alert('Cargando Póker...')">
                     <img src="<?php echo $img_poker; ?>" alt="Poker Icono" class="game-icon-img">
                     <div class="game-name">Poker de Percebes</div>
                 </div>
-
-                <div class="game-card" onclick="window.location.href='blackjack.php'">
+                <div class="game-card" onclick="alert('Cargando Blackjack...')">
                     <img src="<?php echo $img_blackjack; ?>" alt="Blackjack Icono" class="game-icon-img">
                     <div class="game-name">Blackjack Oceánico</div>
                 </div>
-
-                <div class="game-card" onclick="window.location.href='carreras.php'">
+                <div class="game-card" onclick="alert('Cargando Carreras...')">
                     <img src="<?php echo $gif_cangrejo; ?>" alt="Cangrejo GIF" class="game-icon-img">
                     <div class="game-name">Carreras de Cangrejos</div>
                 </div>
